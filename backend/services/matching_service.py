@@ -1,9 +1,8 @@
 import re
-from models.db import Material
+from models.db import Material, SessionLocal
 
 
 def _tokenize(text):
-    """Simple Chinese/English tokenization for matching."""
     tokens = []
     if not text:
         return tokens
@@ -17,12 +16,6 @@ def _tokenize(text):
 
 
 def _calculate_score(keywords, name, tags_str):
-    """
-    Hybrid scoring:
-    - Exact keyword-tag match: highest weight
-    - Partial keyword-tag match (substring): medium weight
-    - Keyword-name match: bonus
-    """
     if not keywords:
         return 0, [], ""
 
@@ -35,7 +28,6 @@ def _calculate_score(keywords, name, tags_str):
 
     for kw in kw_lower:
         best_match = 0
-
         for tag in tag_list:
             if kw == tag:
                 best_match = 1.0
@@ -43,10 +35,8 @@ def _calculate_score(keywords, name, tags_str):
             elif kw in tag or tag in kw:
                 best_match = max(best_match, 0.6)
                 matched.add(tag)
-
         if kw in name_lower or name_lower in kw:
             best_match = max(best_match, 0.5)
-
         score += best_match
 
     total = len(kw_lower)
@@ -63,7 +53,11 @@ def _calculate_score(keywords, name, tags_str):
 
 
 def match_materials(keywords, top_k=3):
-    materials = Material.query.all()
+    session = SessionLocal()
+    try:
+        materials = session.query(Material).all()
+    finally:
+        session.close()
 
     scored = []
     for mat in materials:

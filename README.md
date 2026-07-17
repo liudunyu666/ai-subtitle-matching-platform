@@ -13,7 +13,7 @@
 | 公网演示地址 | https://liudunyu666.github.io/ai-subtitle-matching-platform/ |
 | 测试账号 | 无需登录 |
 | 源代码仓库 | https://github.com/liudunyu666/ai-subtitle-matching-platform |
-| 主要技术方案 | Flask + React + SQLite + Jaccard 关键词匹配 |
+| 主要技术方案 | FastAPI + React + SQLite + Jaccard 关键词匹配 |
 | AI 辅助开发范围 | 代码生成、调试、部署配置；核心方案设计和问题排查由候选人独立完成 |
 
 ## 技术栈
@@ -21,7 +21,7 @@
 | 模块 | 技术 |
 | :--- | :--- |
 | 前端 | React 18 + Ant Design 6 + Vite |
-| 后端 | Flask + SQLAlchemy |
+| 后端 | FastAPI + SQLAlchemy |
 | 数据库 | SQLite |
 | 异步任务 | ThreadPoolExecutor |
 | 语音识别 | OpenAI Whisper API（可降级） |
@@ -83,7 +83,7 @@
 ```bash
 cd backend
 pip install -r requirements.txt
-python app.py
+uvicorn app:app --host 0.0.0.0 --port 5000
 ```
 
 后端默认运行在 `http://localhost:5000`
@@ -104,7 +104,7 @@ npm run dev
 
 1. 在 Render 中创建 Web Service
 2. 构建命令：`cd backend && pip install -r requirements.txt`
-3. 启动命令：`cd backend && gunicorn app:app`
+3. 启动命令：`cd backend && uvicorn app:app --host 0.0.0.0 --port $PORT`
 4. 设置环境变量 `OPENAI_API_KEY`（可选）
 
 ### 前端（GitHub Pages）

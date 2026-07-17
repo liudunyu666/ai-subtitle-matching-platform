@@ -1,3 +1,3 @@
-from models.db import db, Task, Material
+from models.db import Base, SessionLocal, Task, Material, init_db
 
-__all__ = ["db", "Task", "Material"]
+__all__ = ["Base", "SessionLocal", "Task", "Material", "init_db"]
