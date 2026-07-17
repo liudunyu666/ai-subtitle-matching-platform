@@ -214,13 +214,13 @@
 ## 七、提交信息模板
 
 ```text
-候选人姓名：
-选择题目：题目一 / 题目二
-公网演示地址：
-测试账号：
+候选人姓名：柳顿宇
+选择题目：题目二
+公网演示地址：https://liudunyu666.github.io/ai-subtitle-matching-platform/
+测试账号：无需登录
 APK 下载地址（题目一）：
-源代码仓库：
-演示视频：
+源代码仓库：https://github.com/liudunyu666/ai-subtitle-matching-platform
+演示视频：无
 主要技术方案：
 AI 辅助开发范围：
 已完成内容：
