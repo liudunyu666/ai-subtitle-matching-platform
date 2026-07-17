@@ -67,4 +67,9 @@ class Material(Base):
 
 
 def init_db():
-    Base.metadata.create_all(bind=engine, checkfirst=True)
+    from sqlalchemy.exc import OperationalError
+    try:
+        Base.metadata.create_all(bind=engine, checkfirst=True)
+    except OperationalError:
+        # Race condition with gunicorn multi-worker startup
+        pass
