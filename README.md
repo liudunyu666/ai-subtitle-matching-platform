@@ -175,8 +175,8 @@ npm run build
 
 | 变量 | 说明 |
 | :--- | :--- |
-| OPENAI_API_KEY | OpenAI API 密钥（可选，用于 ASR 和 LLM 分段备选） |
-| DASHSCOPE_API_KEY | 阿里云百炼 API 密钥（可选，用于 Paraformer 语音识别） |
+| OPENAI_API_KEY | OpenAI API 密钥 |
+| DASHSCOPE_API_KEY | 阿里云百炼 API 密钥 |
 | PUBLIC_BASE_URL | 后端公网地址（DashScope ASR 需要，如 https://your-app.onrender.com） |
 | DATABASE_URL | 数据库连接（默认 sqlite:///smp.db） |
 | SECRET_KEY | 应用密钥 |
