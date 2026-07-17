@@ -466,23 +466,63 @@ def seed_materials_if_empty():
     finally:
         session.close()
 
-    # Create placeholder images
-    placeholder_src = os.path.join(os.path.dirname(__file__), "static", "placeholder.jpg")
-    os.makedirs(os.path.dirname(placeholder_src), exist_ok=True)
-    if not os.path.exists(placeholder_src):
-        try:
-            from PIL import Image
-            img = Image.new("RGB", (400, 300), color=(200, 200, 200))
-            img.save(placeholder_src)
-        except ImportError:
-            with open(placeholder_src, "wb") as f:
-                f.write(b"")
+    # Create colorful placeholder images with text labels
+    os.makedirs(os.path.join(os.path.dirname(__file__), "static"), exist_ok=True)
 
-    for idx in range(len(samples)):
-        dst = os.path.join(Config.UPLOAD_FOLDER, f"seed_{idx}.jpg")
-        if not os.path.exists(dst):
-            import shutil
-            shutil.copy2(placeholder_src, dst)
+    sample_colors = [
+        (76, 175, 80),    # 春天花园 - green
+        (33, 33, 33),     # 城市夜景 - dark gray
+        (33, 150, 243),   # 科技产品展示 - blue
+        (255, 152, 0),    # 海滩日落 - orange
+        (121, 85, 72),    # 咖啡时光 - brown
+        (56, 142, 60),    # 山间徒步 - forest
+        (69, 90, 100),    # 工作会议 - bluegray
+        (244, 67, 54),    # 美食烹饪 - red
+        (76, 175, 80),    # 运动健身 - green
+        (156, 39, 176),   # 音乐演奏 - purple
+        (48, 63, 159),    # 星空摄影 - indigo
+        (255, 193, 7),    # 宠物日常 - amber
+    ]
+
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+
+        for idx, s in enumerate(samples):
+            dst = os.path.join(Config.UPLOAD_FOLDER, f"seed_{idx}.jpg")
+            if os.path.exists(dst):
+                continue
+
+            color = sample_colors[idx % len(sample_colors)]
+            img = Image.new("RGB", (400, 300), color=color)
+            draw = ImageDraw.Draw(img)
+
+            try:
+                font = ImageFont.truetype("simhei.ttf", 36)
+            except (OSError, IOError):
+                try:
+                    font = ImageFont.truetype("msyh.ttc", 36)
+                except (OSError, IOError):
+                    font = ImageFont.load_default()
+
+            text = s["name"]
+            bbox = draw.textbbox((0, 0), text, font=font)
+            tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+            x = (400 - tw) / 2
+            y = (300 - th) / 2
+            draw.text((x, y), text, fill=(255, 255, 255), font=font)
+            img.save(dst, "JPEG", quality=85)
+    except ImportError:
+        import shutil
+        ps = os.path.join(os.path.dirname(__file__), "static", "placeholder.jpg")
+        if not os.path.exists(ps):
+            gray = Image.new("RGB", (400, 300), color=(200, 200, 200))
+            gray.save(ps)
+        for idx in range(len(samples)):
+            dst = os.path.join(Config.UPLOAD_FOLDER, f"seed_{idx}.jpg")
+            if not os.path.exists(dst):
+                shutil.copy2(ps, dst)
+    except Exception:
+        pass
 
 
 # ─── Static Files ──────────────────────────────────────────────────────
