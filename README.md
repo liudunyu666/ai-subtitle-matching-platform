@@ -14,7 +14,7 @@
 | 测试账号 | 无需登录 |
 | 源代码仓库 | https://github.com/liudunyu666/ai-subtitle-matching-platform |
 | 主要技术方案 | FastAPI + React + SQLite + Jaccard 关键词匹配 |
-| AI 辅助开发范围 | 代码生成、调试、部署配置；核心方案设计和问题排查由候选人独立完成 |
+| AI 辅助开发范围 | 代码生成、调试、部署配置、Bug 修复；核心方案设计和问题排查由候选人独立完成 |
 
 ## 技术栈
 
@@ -24,7 +24,7 @@
 | 后端 | FastAPI + SQLAlchemy |
 | 数据库 | SQLite |
 | 异步任务 | ThreadPoolExecutor |
-| 语音识别 | OpenAI Whisper API（可降级） |
+| 语音识别 | OpenAI Whisper API / 阿里云 DashScope Paraformer |
 | 语义分段 | 规则分词 / LLM（可降级） |
 | 素材匹配 | Jaccard 关键词相似度 |
 | 关键词提取 | jieba TF-IDF |
@@ -49,12 +49,13 @@
 
 ```
 ├── backend/
-│   ├── app.py                  # Flask 应用入口与路由
+│   ├── app.py                  # FastAPI 应用入口与路由
 │   ├── config.py               # 配置
+│   ├── gunicorn.conf.py        # Gunicorn 生产部署配置
 │   ├── requirements.txt        # Python 依赖
 │   ├── models/db.py            # 数据库模型（Task, Material）
 │   ├── services/
-│   │   ├── asr_service.py      # 语音识别服务
+│   │   ├── asr_service.py      # 语音识别服务（OpenAI / DashScope）
 │   │   ├── llm_service.py      # LLM 分段服务
 │   │   ├── matching_service.py # 素材匹配服务
 │   │   ├── segmentation_service.py # 规则分段与关键词
@@ -72,7 +73,7 @@
 │   ├── dist/                   # 构建产物（GitHub Pages 部署）
 │   └── package.json
 ├── README.md
-├── netlify.toml
+├── render.yaml
 └── recruitment-practical-assignment.md
 ```
 
@@ -83,10 +84,17 @@
 ```bash
 cd backend
 pip install -r requirements.txt
-uvicorn app:app --host 0.0.0.0 --port 5000
+uvicorn app:app --host 0.0.0.0 --port 5000 --reload
 ```
 
 后端默认运行在 `http://localhost:5000`
+
+生产环境（Render）使用 Gunicorn + Uvicorn Worker：
+
+```bash
+cd backend
+gunicorn app:app -c gunicorn.conf.py
+```
 
 ### 前端
 
@@ -104,8 +112,12 @@ npm run dev
 
 1. 在 Render 中创建 Web Service
 2. 构建命令：`cd backend && pip install -r requirements.txt`
-3. 启动命令：`cd backend && uvicorn app:app --host 0.0.0.0 --port $PORT`
-4. 设置环境变量 `OPENAI_API_KEY`（可选）
+3. 启动命令：`gunicorn app:app -c gunicorn.conf.py`
+4. 设置环境变量：
+   - `DASHSCOPE_API_KEY`（阿里云百炼，用于语音识别）
+   - `OPENAI_API_KEY`（可选，用于 LLM 分段备选）
+   - `PUBLIC_BASE_URL`（后端公网地址，如 `https://your-app.onrender.com`）
+   - `SECRET_KEY`（应用密钥）
 
 ### 前端（GitHub Pages）
 
@@ -151,7 +163,7 @@ npm run build
 
 | 场景 | 处理方式 |
 | :--- | :--- |
-| 语音识别失败 | 前端提示并允许粘贴字幕文本 |
+| 语音识别失败（文件上传） | 提示 ASR 错误，允许粘贴字幕文本作为备选 |
 | LLM 不可用 | 自动切换规则分词 + TF-IDF |
 | API 返回异常 | 全局错误提示，不影响其他操作 |
 | 任务超时 | 120 秒后标记失败 |
@@ -163,14 +175,16 @@ npm run build
 
 | 变量 | 说明 |
 | :--- | :--- |
-| OPENAI_API_KEY | OpenAI API 密钥（可选，用于 ASR 和 LLM 分段） |
+| OPENAI_API_KEY | OpenAI API 密钥（可选，用于 ASR 和 LLM 分段备选） |
+| DASHSCOPE_API_KEY | 阿里云百炼 API 密钥（可选，用于 Paraformer 语音识别） |
+| PUBLIC_BASE_URL | 后端公网地址（DashScope ASR 需要，如 https://your-app.onrender.com） |
 | DATABASE_URL | 数据库连接（默认 sqlite:///smp.db） |
-| SECRET_KEY | Flask 密钥 |
+| SECRET_KEY | 应用密钥 |
 
 ## 已完成功能
 
 - [x] 上传视频/音频/粘贴字幕文本
-- [x] 语音识别转字幕（Whisper API）
+- [x] 语音识别转字幕（OpenAI Whisper / 阿里云 DashScope Paraformer）
 - [x] 异步任务处理 + 进度展示
 - [x] 任务失败查看原因 + 重试
 - [x] 字幕语义分段 + 关键词提取
@@ -196,4 +210,5 @@ npm run build
 | 无用户登录 | 多用户隔离缺失 | 增加 JWT 认证 |
 | 素材仅本地存储 | 扩展性差 | 接入云存储 OSS |
 | 仅支持关键词搜索 | 语义搜索缺失 | 集成 Embedding 全文搜索 |
+| DashScope ASR 需公网文件 URL | 国内服务器无法访问 Render | 提供粘贴文字备选方案 |
 | 无单元测试 | 回归验证依赖人工 | 增加 pytest + 前端测试 |
