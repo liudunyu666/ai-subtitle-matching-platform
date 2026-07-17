@@ -57,14 +57,23 @@ export default function Materials() {
     }
   }
 
-  const handleDelete = async (id) => {
-    try {
-      await deleteMaterial(id)
-      message.success('已删除')
-      fetchMaterials()
-    } catch (e) {
-      message.error(e.message || '删除失败')
-    }
+  const handleDelete = (id, name) => {
+    Modal.confirm({
+      title: '确认删除',
+      content: `确定要删除素材「${name}」吗？`,
+      okText: '删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await deleteMaterial(id)
+          message.success('已删除')
+          fetchMaterials()
+        } catch (e) {
+          message.error(e.message || '删除失败')
+        }
+      },
+    })
   }
 
   const handleAutoSuggest = async () => {
@@ -136,7 +145,7 @@ export default function Materials() {
               className="material-card"
               cover={getThumbUrl(mat)}
               actions={[
-                <DeleteOutlined key="delete" onClick={() => handleDelete(mat.id)} />,
+                <DeleteOutlined key="delete" onClick={() => handleDelete(mat.id, mat.name)} />,
               ]}
               styles={{ body: { padding: 12 } }}
             >

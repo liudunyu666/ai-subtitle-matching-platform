@@ -4,6 +4,18 @@
 
 用户上传口播视频、音频或粘贴字幕文本后，系统自动完成字幕整理、语义分段、关键词提取，并从素材库中推荐与字幕内容匹配的图片/视频素材，支持人工调整并持久化保存。
 
+## 提交信息
+
+| 项目 | 内容 |
+| :--- | :--- |
+| 候选人姓名 | 刘敦宇 |
+| 选择题目 | 题目二：AI 字幕分析与素材匹配平台 |
+| 公网演示地址 | https://liudunyu666.github.io/ai-subtitle-matching-platform/ |
+| 测试账号 | 无需登录 |
+| 源代码仓库 | https://github.com/liudunyu666/ai-subtitle-matching-platform |
+| 主要技术方案 | Flask + React + SQLite + Jaccard 关键词匹配 |
+| AI 辅助开发范围 | 代码生成、调试、部署配置；核心方案设计和问题排查由候选人独立完成 |
+
 ## 技术栈
 
 | 模块 | 技术 |
@@ -16,6 +28,7 @@
 | 语义分段 | 规则分词 / LLM（可降级） |
 | 素材匹配 | Jaccard 关键词相似度 |
 | 关键词提取 | jieba TF-IDF |
+| 部署 | 前端 GitHub Pages / 后端 Render |
 
 ## 匹配策略说明
 
@@ -26,6 +39,11 @@
 - **实现简单**：适合 Demo 阶段的快速验证
 
 **降级方案**：外部 AI 服务不可用时，后端自动切换到基于 jieba 分词 + TF-IDF 的关键词提取和标点分句规则分段。
+
+## 公网地址
+
+- **前端**：https://liudunyu666.github.io/ai-subtitle-matching-platform/
+- **后端**：https://ai-subtitle-backend-90pz.onrender.com
 
 ## 项目结构
 
@@ -39,7 +57,8 @@
 │   │   ├── asr_service.py      # 语音识别服务
 │   │   ├── llm_service.py      # LLM 分段服务
 │   │   ├── matching_service.py # 素材匹配服务
-│   │   └── segmentation_service.py # 规则分段与关键词
+│   │   ├── segmentation_service.py # 规则分段与关键词
+│   │   └── tag_service.py      # 素材标签自动生成
 │   └── uploads/                # 上传文件存储
 ├── frontend/
 │   ├── src/
@@ -47,11 +66,14 @@
 │   │   ├── pages/
 │   │   │   ├── TaskList.jsx    # 任务列表页
 │   │   │   ├── Upload.jsx      # 新建任务页
-│   │   │   ├── TaskDetail.jsx  # 任务详情页
+│   │   │   ├── TaskDetail.jsx  # 任务详情页（分段、匹配、选择素材）
 │   │   │   └── Materials.jsx   # 素材库页
 │   │   └── App.jsx             # 应用入口与路由
+│   ├── dist/                   # 构建产物（GitHub Pages 部署）
 │   └── package.json
-└── README.md
+├── README.md
+├── netlify.toml
+└── recruitment-practical-assignment.md
 ```
 
 ## 启动方法
@@ -76,6 +98,42 @@ npm run dev
 
 前端默认运行在 `http://localhost:3000`，API 请求自动代理到后端。
 
+## 部署方式
+
+### 后端（Render）
+
+1. 在 Render 中创建 Web Service
+2. 构建命令：`cd backend && pip install -r requirements.txt`
+3. 启动命令：`cd backend && gunicorn app:app`
+4. 设置环境变量 `OPENAI_API_KEY`（可选）
+
+### 前端（GitHub Pages）
+
+```bash
+cd frontend
+npm run build
+```
+
+将 `frontend/dist` 部署到 GitHub Pages，SPA 路由通过 `404.html` fallback 处理。
+
+## API 接口
+
+| 方法 | 路径 | 说明 |
+| :--- | :--- | :--- |
+| POST | /api/tasks | 创建任务（支持文件上传和文本） |
+| GET | /api/tasks | 任务列表 |
+| GET | /api/tasks/:id | 任务详情 |
+| POST | /api/tasks/:id/retry | 重试失败任务 |
+| PUT | /api/tasks/:id/segments | 更新分段 |
+| POST | /api/tasks/:id/segments/:seg_id/select | 选择素材 |
+| GET | /api/materials | 素材列表（支持 ?keyword= 搜索） |
+| POST | /api/materials | 上传素材 |
+| DELETE | /api/materials/:id | 删除素材 |
+| GET | /api/materials/suggest-tags | 自动生成标签 |
+| POST | /api/parse-subtitle | 纯文本解析（同步，绕过 ASR） |
+
+所有接口返回统一格式：`{ "code": 0, "data": {}, "msg": "" }`
+
 ## 测试步骤
 
 1. 访问前端首页，查看任务列表（初始为空）
@@ -89,31 +147,17 @@ npm run dev
 9. 刷新页面确认结果保留
 10. 进入「素材库」查看预置素材，支持搜索和上传新素材
 
-## API 接口
-
-| 方法 | 路径 | 说明 |
-| :--- | :--- | :--- |
-| POST | /api/tasks | 创建任务（支持文件上传和文本） |
-| GET | /api/tasks | 任务列表 |
-| GET | /api/tasks/:id | 任务详情 |
-| PUT | /api/tasks/:id/segments | 更新分段 |
-| POST | /api/tasks/:id/segments/:seg_id/select | 选择素材 |
-| GET | /api/materials | 素材列表（支持 ?keyword= 搜索） |
-| POST | /api/materials | 上传素材 |
-| DELETE | /api/materials/:id | 删除素材 |
-| POST | /api/parse-subtitle | 纯文本解析（同步，绕过 ASR） |
-
-所有接口返回统一格式：`{ "code": 0, "data": {}, "msg": "" }`
-
 ## 异常处理
 
 | 场景 | 处理方式 |
 | :--- | :--- |
 | 语音识别失败 | 前端提示并允许粘贴字幕文本 |
 | LLM 不可用 | 自动切换规则分词 + TF-IDF |
-| 网络异常 | Axios 自动重试 |
+| API 返回异常 | 全局错误提示，不影响其他操作 |
 | 任务超时 | 120 秒后标记失败 |
 | 重复上传 | 文件 MD5 去重 |
+| 后台标签页 | 自动暂停轮询，切回时立即恢复 |
+| 删除素材 | 二次确认弹窗，防止误删 |
 
 ## 环境变量
 
@@ -122,6 +166,26 @@ npm run dev
 | OPENAI_API_KEY | OpenAI API 密钥（可选，用于 ASR 和 LLM 分段） |
 | DATABASE_URL | 数据库连接（默认 sqlite:///smp.db） |
 | SECRET_KEY | Flask 密钥 |
+
+## 已完成功能
+
+- [x] 上传视频/音频/粘贴字幕文本
+- [x] 语音识别转字幕（Whisper API）
+- [x] 异步任务处理 + 进度展示
+- [x] 任务失败查看原因 + 重试
+- [x] 字幕语义分段 + 关键词提取
+- [x] 人工编辑文本 + 拖拽排序
+- [x] 素材库（12 个预置素材，支持搜索/上传/删除）
+- [x] 智能素材匹配（每片段 ≥3 候选 + 匹配理由）
+- [x] 人工替换素材 + 持久化保存
+- [x] 自动为素材生成标签
+- [x] AI 服务失败自动降级
+- [x] 重复任务检测（MD5 去重）
+- [x] 任务超时处理
+- [x] 素材搜索结果显示匹配度与匹配理由
+- [x] 删除素材二次确认，防止误删
+- [x] 页面不可见时暂停轮询，减少无用请求
+- [x] 任务全部完成后自动停止轮询
 
 ## 已知问题与优化方向
 
@@ -132,3 +196,4 @@ npm run dev
 | 无用户登录 | 多用户隔离缺失 | 增加 JWT 认证 |
 | 素材仅本地存储 | 扩展性差 | 接入云存储 OSS |
 | 仅支持关键词搜索 | 语义搜索缺失 | 集成 Embedding 全文搜索 |
+| 无单元测试 | 回归验证依赖人工 | 增加 pytest + 前端测试 |

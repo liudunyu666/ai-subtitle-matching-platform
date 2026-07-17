@@ -23,6 +23,28 @@ export default function TaskDetail({ taskId, onNavigate }) {
   const [searchResults, setSearchResults] = useState([])
   const pollingRef = useRef(null)
 
+  const computeMatch = (material, keywords) => {
+    if (!keywords || keywords.length === 0) return { score: 0, matched: [], reason: '无关键词' }
+    const tagList = (material.tags_str || '').split(',').map(t => t.trim().toLowerCase())
+    const name = (material.name || '').toLowerCase()
+    const matched = []
+    for (const kw of keywords) {
+      const kwLower = kw.toLowerCase()
+      for (const tag of tagList) {
+        if (kwLower === tag || tag.includes(kwLower) || kwLower.includes(tag)) {
+          matched.push(kw)
+          break
+        }
+      }
+      if (!matched.includes(kw) && (name.includes(kwLower) || kwLower.includes(name))) {
+        matched.push(kw)
+      }
+    }
+    const score = keywords.length > 0 ? Math.round((matched.length / keywords.length) * 100) : 0
+    const reason = matched.length > 0 ? `匹配到关键词：${matched.join('、')}` : '无匹配关键词'
+    return { score, matchKeywords: matched, reason }
+  }
+
   const fetchTask = useCallback(async () => {
     try {
       const res = await getTask(taskId)
@@ -48,14 +70,31 @@ export default function TaskDetail({ taskId, onNavigate }) {
   useEffect(() => {
     setLoading(true)
     fetchTask()
-    pollingRef.current = setInterval(async () => {
-      const data = await fetchTask()
-      if (data && (data.status === 'completed' || data.status === 'failed')) {
-        clearInterval(pollingRef.current)
+
+    const startPolling = () => {
+      pollingRef.current = setInterval(async () => {
+        const data = await fetchTask()
+        if (data && (data.status === 'completed' || data.status === 'failed')) {
+          clearInterval(pollingRef.current)
+        }
+      }, 2000)
+    }
+
+    startPolling()
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        if (pollingRef.current) clearInterval(pollingRef.current)
+      } else {
+        fetchTask()
+        startPolling()
       }
-    }, 2000)
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current)
+      document.removeEventListener('visibilitychange', handleVisibility)
     }
   }, [fetchTask])
 
@@ -149,7 +188,10 @@ export default function TaskDetail({ taskId, onNavigate }) {
   const handleSearchMaterial = async () => {
     try {
       const res = await listMaterials(searchKeyword)
-      setSearchResults(res.data || [])
+      const raw = res.data || []
+      const segKeywords = materialModal?.keywords || []
+      const scored = raw.map(m => ({ ...m, _match: computeMatch(m, segKeywords) }))
+      setSearchResults(scored)
     } catch (e) {
       console.error(e)
     }
@@ -433,6 +475,7 @@ export default function TaskDetail({ taskId, onNavigate }) {
           ) : (
             displayMaterials.map((mat) => {
               const isSelected = materialModal?.selected_material_id === mat.id
+              const matchInfo = mat._match || (mat.score != null ? { score: Math.round(mat.score * 100), matchKeywords: mat.matched_keywords, reason: mat.reason } : null)
               return (
                 <div
                   key={mat.id}
@@ -458,6 +501,16 @@ export default function TaskDetail({ taskId, onNavigate }) {
                         <Tag key={i} style={{ fontSize: 11 }}>{tag.trim()}</Tag>
                       ))}
                     </div>
+                    {matchInfo && (
+                      <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>
+                        <Tag color={matchInfo.score > 50 ? 'green' : 'default'} style={{ fontSize: 10 }}>
+                          匹配度 {matchInfo.score}%
+                        </Tag>
+                        {matchInfo.matchKeywords?.length > 0 && (
+                          <span>匹配: {matchInfo.matchKeywords.join(', ')}</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                   {isSelected && <Tag color="green">已选</Tag>}
                 </div>

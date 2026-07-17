@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Card, Tag, Typography, Spin, Empty, Button, Row, Col, Progress } from 'antd'
 import { ReloadOutlined, PlusOutlined } from '@ant-design/icons'
 import { listTasks } from '../api'
@@ -10,27 +10,68 @@ const statusConfig = {
   failed: { color: 'error', text: '执行失败' },
 }
 
+function getSegmentCount(task) {
+  if (!task.result) return 0
+  try {
+    const parsed = typeof task.result === 'string' ? JSON.parse(task.result) : task.result
+    return Array.isArray(parsed) ? parsed.length : 0
+  } catch {
+    return 0
+  }
+}
+
 export default function TaskList({ onNavigate }) {
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(false)
+  const pollingRef = useRef(null)
+
+  const startPolling = useCallback(() => {
+    if (pollingRef.current) clearInterval(pollingRef.current)
+    pollingRef.current = setInterval(fetchTasks, 5000)
+  }, []) // eslint-disable-line
+
+  const stopPolling = useCallback(() => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current)
+      pollingRef.current = null
+    }
+  }, [])
 
   const fetchTasks = useCallback(async () => {
     setLoading(true)
     try {
       const res = await listTasks()
-      setTasks(res.data || [])
+      const data = res.data || []
+      setTasks(data)
+      if (data.length > 0 && data.every(t => t.status === 'completed' || t.status === 'failed')) {
+        stopPolling()
+      }
     } catch (e) {
       console.error(e)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [stopPolling])
 
   useEffect(() => {
     fetchTasks()
-    const interval = setInterval(fetchTasks, 5000)
-    return () => clearInterval(interval)
-  }, [fetchTasks])
+    startPolling()
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        stopPolling()
+      } else {
+        fetchTasks()
+        startPolling()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => {
+      stopPolling()
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [fetchTasks, startPolling, stopPolling])
 
   return (
     <div className="page-container">
@@ -74,7 +115,7 @@ export default function TaskList({ onNavigate }) {
                   )}
                   {task.status === 'completed' && (
                     <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                      {task.result ? `${task.result.length || JSON.parse(task.result).length || 0} 个片段` : '已完成'}
+                      {getSegmentCount(task) > 0 ? `${getSegmentCount(task)} 个片段` : '已完成'}
                     </Typography.Text>
                   )}
                   <div style={{ marginTop: 8 }}>

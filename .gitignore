@@ -7,3 +7,4 @@ instance/
 *.db
 uploads/*
 !uploads/.gitkeep
+.claude/
