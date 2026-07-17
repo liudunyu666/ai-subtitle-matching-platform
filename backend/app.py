@@ -411,9 +411,13 @@ def seed_materials():
         placeholder = os.path.join(os.path.dirname(__file__), "static", "placeholder.jpg")
     os.makedirs(os.path.dirname(placeholder), exist_ok=True)
     if not os.path.exists(placeholder):
-        from PIL import Image
-        img = Image.new("RGB", (400, 300), color=(200, 200, 200))
-        img.save(placeholder)
+        try:
+            from PIL import Image
+            img = Image.new("RGB", (400, 300), color=(200, 200, 200))
+            img.save(placeholder)
+        except ImportError:
+            with open(placeholder, "wb") as f:
+                f.write(b"")
 
     for idx in range(len(samples)):
         dst = os.path.join(Config.UPLOAD_FOLDER, f"seed_{idx}.jpg")
