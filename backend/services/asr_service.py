@@ -50,11 +50,22 @@ def _dashscope_transcribe(file_path, api_key, public_base_url):
     if result.status_code != 200:
         raise ValueError(f"DashScope transcription failed: {result}")
 
-    # Download transcription result from the returned URL
-    transcription_url = result.output["results"][0]["transcription_url"]
-    transcription_data = json.loads(request.urlopen(transcription_url).read().decode("utf-8"))
+    # Try direct results first (sentences with text field)
+    sentences = result.output.get("results", [])
+    if sentences:
+        text = "".join(s.get("text", "") for s in sentences)
+        if text.strip():
+            return text
 
-    # Extract text from sentences
-    sentences = transcription_data.get("transcripts", [])
-    text = "".join(s.get("text", "") for s in sentences)
-    return text
+    # Fallback: download from transcription_url
+    try:
+        transcription_url = result.output["results"][0]["transcription_url"]
+        transcription_data = json.loads(request.urlopen(transcription_url).read().decode("utf-8"))
+        transcripts = transcription_data.get("transcripts", [])
+        text = "".join(t.get("text", "") for t in transcripts)
+        if text.strip():
+            return text
+    except (KeyError, IndexError, json.JSONDecodeError, UnicodeDecodeError) as e:
+        raise ValueError(f"DashScope transcription result parsing failed: {e}")
+
+    raise ValueError("DashScope transcription returned no text")
