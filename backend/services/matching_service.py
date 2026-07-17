@@ -1,3 +1,4 @@
+import json
 import re
 from models.db import Material, SessionLocal
 
@@ -15,13 +16,20 @@ def _tokenize(text):
     return tokens
 
 
-def _calculate_score(keywords, name, tags_str):
+def _calculate_score(keywords, name, tags):
     if not keywords:
         return 0, [], ""
 
     kw_lower = [k.lower().strip() for k in keywords if k.strip()]
     name_lower = name.lower().strip() if name else ""
-    tag_list = [t.strip().lower() for t in tags_str.split(",")] if tags_str else []
+
+    tag_list = []
+    if tags:
+        try:
+            tag_list = json.loads(tags) if isinstance(tags, str) else tags
+        except (json.JSONDecodeError, TypeError):
+            tag_list = [t.strip() for t in tags.split(",") if t.strip()]
+    tag_list = [t.strip().lower() for t in tag_list]
 
     matched = set()
     score = 0.0
@@ -61,8 +69,7 @@ def match_materials(keywords, top_k=3):
 
     scored = []
     for mat in materials:
-        tags_str = mat.tags or ""
-        score, matched_kw, reason = _calculate_score(keywords, mat.name, tags_str)
+        score, matched_kw, reason = _calculate_score(keywords, mat.name, mat.tags)
         scored.append({
             "material": mat.to_dict(),
             "score": score,

@@ -1,3 +1,4 @@
+import json
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import datetime, timezone
@@ -55,12 +56,17 @@ class Material(Base):
     upload_time = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
+        tags = []
+        if self.tags:
+            try:
+                tags = json.loads(self.tags) if isinstance(self.tags, str) else self.tags
+            except (json.JSONDecodeError, TypeError):
+                tags = [t.strip() for t in self.tags.split(",") if t.strip()]
         return {
             "id": self.id,
             "name": self.name,
             "file_path": self.file_path,
-            "tags": self.tags.split(",") if self.tags else [],
-            "tags_str": self.tags or "",
+            "tags": tags,
             "type": self.type,
             "upload_time": self.upload_time.isoformat() if self.upload_time else None,
         }

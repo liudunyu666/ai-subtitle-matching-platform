@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   Typography, Input, Card, Button, Modal, Form, Upload, Tag, Empty, Spin, message, Image, Space,
 } from 'antd'
-import { PlusOutlined, SearchOutlined, DeleteOutlined, UploadOutlined } from '@ant-design/icons'
+import { PlusOutlined, SearchOutlined, DeleteOutlined, UploadOutlined, PlayCircleOutlined } from '@ant-design/icons'
 import { listMaterials, uploadMaterial, deleteMaterial, suggestTags, API_BASE } from '../api'
 
 export default function Materials() {
@@ -85,8 +85,8 @@ export default function Materials() {
     setSuggesting(true)
     try {
       const res = await suggestTags(name.trim())
-      if (res.data?.tags) {
-        form.setFieldValue('tags', res.data.tags)
+      if (res.data?.tags?.length > 0) {
+        form.setFieldValue('tags', res.data.tags.join('，'))
         message.success('已自动生成标签')
       }
     } catch (e) {
@@ -101,8 +101,9 @@ export default function Materials() {
     const imgStyle = { width: '100%', height: 160, objectFit: 'cover', borderRadius: '8px 8px 0 0', background: '#f0f0f0' }
     if (isVideo) {
       return (
-        <div style={{ ...imgStyle, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
-          <Typography.Text style={{ color: '#fff' }}>🎬 {mat.name}</Typography.Text>
+        <div style={{ ...imgStyle, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
+          <PlayCircleOutlined style={{ fontSize: 32, color: '#fff', marginBottom: 8 }} />
+          <Typography.Text style={{ color: '#fff' }}>{mat.name}</Typography.Text>
         </div>
       )
     }
@@ -153,7 +154,7 @@ export default function Materials() {
                 title={<Typography.Text ellipsis>{mat.name}</Typography.Text>}
                 description={
                   <Space wrap size={4}>
-                    {mat.tags_str?.split(',').map((tag, i) => (
+                    {mat.tags?.map((tag, i) => (
                       <Tag key={i} style={{ fontSize: 11, margin: 0 }}>{tag.trim()}</Tag>
                     ))}
                   </Space>

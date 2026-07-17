@@ -335,8 +335,7 @@ def suggest_material_tags(name: str = ""):
         return json_resp(data={"tags": []})
     from services.tag_service import suggest_tags
     tags = suggest_tags(name)
-    joined = "，".join(tags) if tags else ""
-    return json_resp(data={"tags": joined, "tag_list": tags})
+    return json_resp(data={"tags": tags, "tag_list": tags})
 
 
 @app.get("/api/materials")
@@ -368,10 +367,11 @@ async def upload_material(name: str = Form(""), tags: str = Form(""), file: Uplo
 
     mime_type = file.content_type or ""
     mat_type = "video" if mime_type.startswith("video") else "image"
+    tags_json = json.dumps([t.strip() for t in tags.split(",") if t.strip()], ensure_ascii=False) if tags else "[]"
 
     session = SessionLocal()
     try:
-        mat = Material(name=name, file_path=safe_name, tags=tags, type=mat_type)
+        mat = Material(name=name, file_path=safe_name, tags=tags_json, type=mat_type)
         session.add(mat)
         session.commit()
         return json_resp(data=mat.to_dict())
@@ -440,18 +440,18 @@ def seed_materials_if_empty():
             return
 
         samples = [
-            {"name": "春天花园", "tags": "春天,花园,花朵,自然,植物"},
-            {"name": "城市夜景", "tags": "城市,夜景,灯光,建筑,都市"},
-            {"name": "科技产品展示", "tags": "科技,产品,展示,数码,创新"},
-            {"name": "海滩日落", "tags": "海滩,日落,海洋,自然,风景"},
-            {"name": "咖啡时光", "tags": "咖啡,饮品,生活,休闲,美食"},
-            {"name": "山间徒步", "tags": "山,徒步,自然,户外,风景"},
-            {"name": "工作会议", "tags": "工作,会议,办公,团队,商务"},
-            {"name": "美食烹饪", "tags": "美食,烹饪,食物,厨房,生活"},
-            {"name": "运动健身", "tags": "运动,健身,健康,跑步,户外"},
-            {"name": "音乐演奏", "tags": "音乐,演奏,乐器,艺术,表演"},
-            {"name": "星空摄影", "tags": "星空,摄影,夜景,自然,天文"},
-            {"name": "宠物日常", "tags": "宠物,动物,日常,生活,可爱"},
+            {"name": "春天花园", "tags": json.dumps(["春天", "花园", "花朵", "自然", "植物"], ensure_ascii=False)},
+            {"name": "城市夜景", "tags": json.dumps(["城市", "夜景", "灯光", "建筑", "都市"], ensure_ascii=False)},
+            {"name": "科技产品展示", "tags": json.dumps(["科技", "产品", "展示", "数码", "创新"], ensure_ascii=False)},
+            {"name": "海滩日落", "tags": json.dumps(["海滩", "日落", "海洋", "自然", "风景"], ensure_ascii=False)},
+            {"name": "咖啡时光", "tags": json.dumps(["咖啡", "饮品", "生活", "休闲", "美食"], ensure_ascii=False)},
+            {"name": "山间徒步", "tags": json.dumps(["山", "徒步", "自然", "户外", "风景"], ensure_ascii=False)},
+            {"name": "工作会议", "tags": json.dumps(["工作", "会议", "办公", "团队", "商务"], ensure_ascii=False)},
+            {"name": "美食烹饪", "tags": json.dumps(["美食", "烹饪", "食物", "厨房", "生活"], ensure_ascii=False)},
+            {"name": "运动健身", "tags": json.dumps(["运动", "健身", "健康", "跑步", "户外"], ensure_ascii=False)},
+            {"name": "音乐演奏", "tags": json.dumps(["音乐", "演奏", "乐器", "艺术", "表演"], ensure_ascii=False)},
+            {"name": "星空摄影", "tags": json.dumps(["星空", "摄影", "夜景", "自然", "天文"], ensure_ascii=False)},
+            {"name": "宠物日常", "tags": json.dumps(["宠物", "动物", "日常", "生活", "可爱"], ensure_ascii=False)},
         ]
         for idx, s in enumerate(samples):
             mat = Material(

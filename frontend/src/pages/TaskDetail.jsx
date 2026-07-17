@@ -25,7 +25,7 @@ export default function TaskDetail({ taskId, onNavigate }) {
 
   const computeMatch = (material, keywords) => {
     if (!keywords || keywords.length === 0) return { score: 0, matched: [], reason: '无关键词' }
-    const tagList = (material.tags_str || '').split(',').map(t => t.trim().toLowerCase())
+    const tagList = (material.tags || []).map(t => String(t).trim().toLowerCase())
     const name = (material.name || '').toLowerCase()
     const matched = []
     for (const kw of keywords) {
@@ -497,7 +497,7 @@ export default function TaskDetail({ taskId, onNavigate }) {
                   <div style={{ flex: 1 }}>
                     <Typography.Text strong>{mat.name}</Typography.Text>
                     <div>
-                      {mat.tags_str?.split(',').map((tag, i) => (
+                      {mat.tags?.map((tag, i) => (
                         <Tag key={i} style={{ fontSize: 11 }}>{tag.trim()}</Tag>
                       ))}
                     </div>
