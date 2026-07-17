@@ -1,5 +1,4 @@
 import os
-import time
 
 
 def transcribe(file_path, openai_api_key="", dashscope_api_key="", public_base_url=""):
@@ -28,6 +27,8 @@ def _openai_transcribe(file_path, api_key):
 
 def _dashscope_transcribe(file_path, api_key, public_base_url):
     from dashscope.audio.asr import Transcription
+    import json
+    from urllib import request
 
     # The file must be accessible via HTTP URL
     if not public_base_url:
@@ -36,28 +37,24 @@ def _dashscope_transcribe(file_path, api_key, public_base_url):
     file_name = os.path.basename(file_path)
     file_url = f"{public_base_url}/uploads/{file_name}"
 
-    result = Transcription.async_call(
+    task_response = Transcription.async_call(
         model="paraformer-v1",
-        audio_url=file_url,
-        language="zh",
+        file_urls=[file_url],
+        language_hints=["zh"],
     )
+    if task_response.status_code != 200:
+        raise ValueError(f"DashScope transcription failed: {task_response}")
+
+    # Wait for result (blocking, no manual polling needed)
+    result = Transcription.wait(task=task_response.output.task_id)
     if result.status_code != 200:
         raise ValueError(f"DashScope transcription failed: {result}")
 
-    transcribe_id = result.output["task_id"]
+    # Download transcription result from the returned URL
+    transcription_url = result.output["results"][0]["transcription_url"]
+    transcription_data = json.loads(request.urlopen(transcription_url).read().decode("utf-8"))
 
-    # Poll for result
-    for _ in range(60):
-        time.sleep(2)
-        result = Transcription.fetch(task_id=transcribe_id)
-        if result.status_code != 200:
-            continue
-        status = result.output.get("status")
-        if status == "SUCCEEDED":
-            sentences = result.output.get("results", [])
-            text = "".join(s.get("text", "") for s in sentences)
-            return text
-        elif status == "FAILED":
-            raise ValueError(f"DashScope transcription failed: {result.output.get('error', '')}")
-
-    raise TimeoutError("DashScope transcription timed out")
+    # Extract text from sentences
+    sentences = transcription_data.get("transcripts", [])
+    text = "".join(s.get("text", "") for s in sentences)
+    return text
