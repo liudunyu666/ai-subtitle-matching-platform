@@ -94,6 +94,8 @@ def process_task_background(task_id):
                 text = asr_transcribe(task.file_path, Config.OPENAI_API_KEY, Config.DASHSCOPE_API_KEY, Config.PUBLIC_BASE_URL)
             except Exception as e:
                 print(f"ASR failed, switching to fallback: {e}")
+                task.error_msg = str(e)
+                session.commit()
                 text = ""
             task.progress = 40
         else:
@@ -103,7 +105,8 @@ def process_task_background(task_id):
         raw = task.raw_text or ""
         final_text = text or raw
         if not final_text.strip():
-            raise ValueError("No subtitle text available. Use the paste-text option.")
+            msg = task.error_msg or "No subtitle text available. Use the paste-text option."
+            raise ValueError(msg)
 
         task.progress = 50
         session.commit()
