@@ -89,7 +89,7 @@ def process_task_background(task_id):
         session.commit()
         check_timeout()
 
-        if task.file_path and os.path.exists(task.file_path):
+        if task.file_path and os.path.exists(task.file_path) and not (task.raw_text or "").strip():
             try:
                 text = asr_transcribe(task.file_path, Config.OPENAI_API_KEY, Config.DASHSCOPE_API_KEY, Config.PUBLIC_BASE_URL)
             except Exception as e:

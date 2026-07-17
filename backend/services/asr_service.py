@@ -28,6 +28,7 @@ def _openai_transcribe(file_path, api_key):
 def _dashscope_transcribe(file_path, api_key, public_base_url):
     from dashscope.audio.asr import Transcription
     import json
+    from urllib import request
 
     if not public_base_url:
         raise ValueError("PUBLIC_BASE_URL is required for DashScope ASR")
@@ -47,6 +48,31 @@ def _dashscope_transcribe(file_path, api_key, public_base_url):
     if result.status_code != 200:
         raise ValueError(f"DashScope transcription failed: {result}")
 
-    # Dump the full output as JSON to see the structure
-    raw = json.dumps({k: str(v) for k, v in dict(result.output).items()}, ensure_ascii=False)
-    raise ValueError(f"DashScope RAW output for debugging: {raw}")
+    # Check task status
+    task_status = result.output.get("task_status")
+    if task_status == "FAILED":
+        err_msg = result.output.get("message", "unknown error")
+        raise ValueError(f"DashScope transcription failed: {err_msg}")
+
+    # Try direct results from output
+    sentences = result.output.get("results") or result.output.get("sentences")
+    if sentences and isinstance(sentences, list):
+        text = "".join(s.get("text", "") for s in sentences if isinstance(s, dict))
+        if text.strip():
+            return text
+
+    # Fallback: download from transcription_url
+    try:
+        results_list = result.output.get("results", [])
+        if results_list and isinstance(results_list[0], dict):
+            url = results_list[0].get("transcription_url", "")
+            if url:
+                data = json.loads(request.urlopen(url).read().decode("utf-8"))
+                transcripts = data.get("transcripts", [])
+                text = "".join(t.get("text", "") for t in transcripts)
+                if text.strip():
+                    return text
+    except Exception as e:
+        raise ValueError(f"DashScope result parse failed: {e}")
+
+    raise ValueError("DashScope transcription returned no text")
