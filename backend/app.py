@@ -90,14 +90,10 @@ def process_task_background(task_id):
         check_timeout()
 
         if task.file_path and os.path.exists(task.file_path):
-            api_key = Config.OPENAI_API_KEY
-            if api_key:
-                try:
-                    text = asr_transcribe(task.file_path, api_key)
-                except Exception as e:
-                    print(f"ASR failed, switching to fallback: {e}")
-                    text = ""
-            else:
+            try:
+                text = asr_transcribe(task.file_path, Config.OPENAI_API_KEY, Config.DASHSCOPE_API_KEY, Config.PUBLIC_BASE_URL)
+            except Exception as e:
+                print(f"ASR failed, switching to fallback: {e}")
                 text = ""
             task.progress = 40
         else:

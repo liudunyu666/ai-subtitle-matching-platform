@@ -7,3 +7,5 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
+      - key: PUBLIC_BASE_URL
+        value: https://ai-subtitle-backend-90pz.onrender.com
